@@ -258,7 +258,7 @@ def  html_quote( line ):
 ##
 class  HtmlFormatter( Formatter ):
 
-    def  __init__( self, processor, project_title, file_prefix ):
+    def __init__( self, processor, project_title, file_prefix ):
         Formatter.__init__( self, processor )
 
         global html_header_1
@@ -269,11 +269,7 @@ class  HtmlFormatter( Formatter ):
         global html_header_6
         global html_footer
 
-        if file_prefix:
-            file_prefix = file_prefix + "-"
-        else:
-            file_prefix = ""
-
+        file_prefix = f"{file_prefix}-" if file_prefix else ""
         self.headers       = processor.headers
         self.project_title = project_title
         self.file_prefix   = file_prefix
@@ -306,16 +302,14 @@ class  HtmlFormatter( Formatter ):
     def  make_section_url( self, section ):
         return self.file_prefix + section.name + ".html"
 
-    def  make_block_url( self, block, name = None ):
-        if name == None:
+    def make_block_url( self, block, name = None ):
+        if name is None:
             name = block.name
-        return self.make_section_url( block.section ) + "#" + name
+        return f"{self.make_section_url(block.section)}#{name}"
 
-    def  make_html_word( self, word ):
+    def make_html_word( self, word ):
         """Analyze a simple word to detect cross-references and markup."""
-        # handle cross-references
-        m = re_crossref.match( word )
-        if m:
+        if m := re_crossref.match(word):
             try:
                 name = m.group( 1 )
                 rest = m.group( 2 )
@@ -326,31 +320,28 @@ class  HtmlFormatter( Formatter ):
                 # we detected a cross-reference to an unknown item
                 sys.stderr.write( "WARNING: undefined cross reference"
                                   + " '" + name + "'.\n" )
-                return '?' + name + '?' + rest
+                return f'?{name}?{rest}'
 
-        # handle markup for italic and bold
-        m = re_italic.match( word )
-        if m:
+        if m := re_italic.match(word):
             name = m.group( 1 )
             rest = m.group( 2 )
-            return '<i>' + name + '</i>' + rest
+            return f'<i>{name}</i>{rest}'
 
-        m = re_bold.match( word )
-        if m:
+        if m := re_bold.match(word):
             name = m.group( 1 )
             rest = m.group( 2 )
-            return '<b>' + name + '</b>' + rest
+            return f'<b>{name}</b>{rest}'
 
         return html_quote( word )
 
-    def  make_html_para( self, words ):
+    def make_html_para( self, words ):
         """Convert words of a paragraph into tagged HTML text.  Also handle
            cross references."""
         line = ""
         if words:
             line = self.make_html_word( words[0] )
             for word in words[1:]:
-                line = line + " " + self.make_html_word( word )
+                line = f"{line} {self.make_html_word(word)}"
             # handle hyperlinks
             line = re_url.sub( r'<a href="\1">\1</a>', line )
             # convert `...' quotations into real left and right single quotes
@@ -395,11 +386,10 @@ class  HtmlFormatter( Formatter ):
         if field.name:
             print "</td></tr></table>"
 
-    def  html_source_quote( self, line, block_name = None ):
+    def html_source_quote( self, line, block_name = None ):
         result = ""
         while line:
-            m = re_source_crossref.match( line )
-            if m:
+            if m := re_source_crossref.match(line):
                 name   = m.group( 2 )
                 prefix = html_quote( m.group( 1 ) )
                 length = len( m.group( 0 ) )
@@ -477,12 +467,13 @@ class  HtmlFormatter( Formatter ):
         url   = self.make_block_url( block )
         self.index_items[name] = url
 
-    def  index_exit( self ):
+    def index_exit( self ):
         # `block_index' already contains the sorted list of index names
         count = len( self.block_index )
         rows  = ( count + self.columns - 1 ) // self.columns
 
-        print '<table class="index">'
+        # `block_index' already contains the sorted list of index names
+        count = len( self.block_index )
         for r in range( rows ):
             line = "<tr>"
             for c in range( self.columns ):
@@ -493,23 +484,24 @@ class  HtmlFormatter( Formatter ):
                     line  = ( line + '<td><a href="' + url + '">'
                               + bname + '</a></td>' )
                 else:
-                    line = line + '<td></td>'
-            line = line + "</tr>"
-            print line
+                    line = f'{line}<td></td>'
+            line = f"{line}</tr>"
+            line = "<tr>"
+                print line
 
-        print "</table>"
-
+        # `block_index' already contains the sorted list of index names
+        count = len( self.block_index )
         print( index_footer_start
                + self.file_prefix + "toc.html"
                + index_footer_end )
 
-        print self.html_footer
-
+        # `block_index' already contains the sorted list of index names
+        count = len( self.block_index )
         self.index_items = {}
 
-    def  index_dump( self, index_filename = None ):
-        if index_filename == None:
-            index_filename = self.file_prefix + "index.html"
+    def index_dump( self, index_filename = None ):
+        if index_filename is None:
+            index_filename = f"{self.file_prefix}index.html"
 
         Formatter.index_dump( self, index_filename )
 
@@ -549,12 +541,12 @@ class  HtmlFormatter( Formatter ):
 
         print self.html_footer
 
-    def  toc_dump( self, toc_filename = None, index_filename = None ):
-        if toc_filename == None:
-            toc_filename = self.file_prefix + "toc.html"
+    def toc_dump( self, toc_filename = None, index_filename = None ):
+        if toc_filename is None:
+            toc_filename = f"{self.file_prefix}toc.html"
 
-        if index_filename == None:
-            index_filename = self.file_prefix + "index.html"
+        if index_filename is None:
+            index_filename = f"{self.file_prefix}index.html"
 
         Formatter.toc_dump( self, toc_filename, index_filename )
 
@@ -615,35 +607,28 @@ class  HtmlFormatter( Formatter ):
         print self.make_html_items( section.description )
         print description_footer
 
-    def  block_enter( self, block ):
-        print block_header
-
+    def block_enter( self, block ):
+        def  block_enter( self, block ):
         # place html anchor if needed
         if block.name:
             print( '<h3 id="' + block.name + '">' + block.name + '</h3>' )
 
         # dump the block C source lines now
         if block.code:
+            if header := next(
+                (
+                    f'{self.headers[f]} ({f})'
+                    for f in self.headers.keys()
+                    if block.source.filename.find(f) >= 0
+                ),
+                '',
+            ):
+                print(f'{header_location_header}Defined in {header}.{header_location_footer}')
+
             header = ''
-            for f in self.headers.keys():
-                if block.source.filename.find( f ) >= 0:
-                    header = self.headers[f] + ' (' + f + ')'
-                    break
-
-#           if not header:
-#               sys.stderr.write(
-#                 "WARNING: No header macro for"
-#                 + " '" + block.source.filename + "'.\n" )
-
-            if header:
-                print ( header_location_header
-                        + 'Defined in ' + header + '.'
-                        + header_location_footer )
-
-            print source_header
-            for l in block.code:
-                print self.html_source_quote( l, block.name )
-            print source_footer
+            for _ in block.code:
+                for l in block.code:
+            header = ''
 
     def  markup_enter( self, markup, block ):
         if markup.tag == "description":

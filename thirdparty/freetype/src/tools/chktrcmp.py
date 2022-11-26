@@ -93,22 +93,15 @@ for f in TRACE_DEF_FILES:
           ( os.path.basename( f ), line_num )
 
 
-# --------------------------------------------------------------
-# Compare the used and defined trace macros.
-#
-
-print "# Trace component used in the implementations but not defined in fttrace.h."
+import sys
 cmpnt = USED_COMPONENT.keys()
 cmpnt.sort()
 for c in cmpnt:
   if c not in KNOWN_COMPONENT:
-    print "Trace component %s (used in %s) is not defined." % ( c, ", ".join( USED_COMPONENT[c] ) )
-
-print "# Trace component is defined but not used in the implementations."
+import sys
 cmpnt = KNOWN_COMPONENT.keys()
 cmpnt.sort()
 for c in cmpnt:
-  if c not in USED_COMPONENT:
+  if c not in USED_COMPONENT and c != "any":
     if c != "any":
-      print "Trace component %s (defined in %s) is not used." % ( c, KNOWN_COMPONENT[c] )
 
