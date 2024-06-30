@@ -36,13 +36,9 @@ public:
     MOCK_METHOD(bool, isPlaying, (), (const, override));
     MOCK_METHOD(muse::async::Notification, isPlayingChanged, (), (const, override));
 
-    MOCK_METHOD(void, seek, (const muse::midi::tick_t), (override));
-    MOCK_METHOD(void, seek, (const muse::audio::msecs_t), (override));
     MOCK_METHOD(void, reset, (), (override));
 
-    MOCK_METHOD(muse::async::Notification, playbackPositionChanged, (), (const, override));
     MOCK_METHOD(muse::async::Channel<uint32_t>, midiTickPlayed, (), (const, override));
-    MOCK_METHOD(float, playbackPositionInSeconds, (), (const, override));
 
     MOCK_METHOD(muse::audio::TrackSequenceId, currentTrackSequenceId, (), (const, override));
     MOCK_METHOD(muse::async::Notification, currentTrackSequenceIdChanged, (), (const, override));
@@ -63,7 +59,7 @@ public:
     MOCK_METHOD(notation::INotationSoloMuteState::SoloMuteState, trackSoloMuteState, (const engraving::InstrumentTrackId&),
                 (const, override));
     MOCK_METHOD(void, setTrackSoloMuteState, (const engraving::InstrumentTrackId&, const notation::INotationSoloMuteState::SoloMuteState&),
-                (const, override));
+                (override));
 
     MOCK_METHOD(void, playElements, ((const std::vector<const notation::EngravingItem*>&)), (override));
     MOCK_METHOD(void, playMetronome, (int), (override));

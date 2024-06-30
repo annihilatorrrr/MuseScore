@@ -1241,13 +1241,14 @@ void NotationActionController::addImage()
         return;
     }
 
-    std::vector<std::string> filter = { muse::trc("notation", "All Supported Files") + " (*.svg *.jpg *.jpeg *.png *.bmp *.tif *.tiff)",
-                                        muse::trc("notation", "Scalable Vector Graphics") + " (*.svg)",
-                                        muse::trc("notation", "JPEG") + " (*.jpg *.jpeg)",
-                                        muse::trc("notation", "PNG Bitmap Graphic") + " (*.png)",
-                                        muse::trc("notation", "Bitmap") + " (*.bmp)",
-                                        muse::trc("notation", "TIFF") + " (*.tif *.tiff)",
-                                        muse::trc("notation", "All") + " (*)" };
+    std::vector<std::string> filter
+        = { muse::trc("notation", "All Supported Files") + " (*.svg *.svgz *.jpg *.jpeg *.png *.bmp *.tif *.tiff)",
+            muse::trc("notation", "Scalable Vector Graphics") + " (*.svg *.svgz)",
+            muse::trc("notation", "JPEG") + " (*.jpg *.jpeg)",
+            muse::trc("notation", "PNG Bitmap Graphic") + " (*.png)",
+            muse::trc("notation", "Bitmap") + " (*.bmp)",
+            muse::trc("notation", "TIFF") + " (*.tif *.tiff)",
+            muse::trc("notation", "All") + " (*)" };
 
     muse::io::path_t path = interactive()->selectOpeningFile(muse::qtrc("notation", "Insert Image"), "", filter);
     interaction->addImageToItem(path, item);
@@ -1620,7 +1621,7 @@ void NotationActionController::loadStyle()
         }
         if (!currentNotationStyle()->loadStyle(path.toQString(), false) && interactive()->warning(
                 muse::trc("notation",
-                          "Since this style file is from a different version of MuseScore, your score is not guaranteed to display correctly."),
+                          "Since this style file is from a different version of MuseScore Studio, your score is not guaranteed to display correctly."),
                 muse::trc("notation", "Click OK to load anyway."), { IInteractive::Button::Ok, IInteractive::Button::Cancel },
                 IInteractive::Button::Ok).standardButton()
             == IInteractive::Button::Ok) {

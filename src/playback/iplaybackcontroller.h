@@ -48,13 +48,9 @@ public:
     virtual bool isPlaying() const = 0;
     virtual muse::async::Notification isPlayingChanged() const = 0;
 
-    virtual void seek(const muse::midi::tick_t tick) = 0;
-    virtual void seek(const muse::audio::msecs_t msecs) = 0;
     virtual void reset() = 0;
 
-    virtual muse::async::Notification playbackPositionChanged() const = 0;
     virtual muse::async::Channel<uint32_t> midiTickPlayed() const = 0;
-    virtual float playbackPositionInSeconds() const = 0;
 
     virtual muse::audio::TrackSequenceId currentTrackSequenceId() const = 0;
     virtual muse::async::Notification currentTrackSequenceIdChanged() const = 0;
@@ -77,7 +73,7 @@ public:
 
     virtual notation::INotationSoloMuteState::SoloMuteState trackSoloMuteState(const engraving::InstrumentTrackId& trackId) const = 0;
     virtual void setTrackSoloMuteState(const engraving::InstrumentTrackId& trackId,
-                                       const notation::INotationSoloMuteState::SoloMuteState& state) const = 0;
+                                       const notation::INotationSoloMuteState::SoloMuteState& state) = 0;
 
     virtual void playElements(const std::vector<const notation::EngravingItem*>& elements) = 0;
     virtual void playMetronome(int tick) = 0;

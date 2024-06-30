@@ -136,9 +136,9 @@ public:
     void defaults();
     void pageLayout(PageFormat& pf, const double conversion);
     void partList(MusicXmlPartGroupList& partGroupList);
-    void partGroup(const int scoreParts, MusicXmlPartGroupList& partGroupList, MusicXmlPartGroupMap& partGroups);
-    void scorePart();
-    void scoreInstrument(const String& partId);
+    void partGroup(const int scoreParts, MusicXmlPartGroupList& partGroupList, MusicXmlPartGroupMap& partGroups, String& curPartGroupName);
+    void scorePart(const String& curPartGroupName);
+    void scoreInstrument(const String& partId, const String& curPartGroupName);
     void setStyle(const String& type, const double val);
     void midiInstrument(const String& partId);
     void part();
@@ -183,6 +183,7 @@ public:
     const CreditWordsList& credits() const { return m_credits; }
     bool hasBeamingInfo() const { return m_hasBeamingInfo; }
     bool isVocalStaff(const String& id) const { return m_parts.at(id).isVocalStaff(); }
+    bool isPercussionStaff(const String& id) const { return m_parts.at(id).isPercussionStaff(); }
     static VBox* createAndAddVBoxForCreditWords(Score* score, const int miny = 0, const int maxy = 75);
     static void reformatHeaderVBox(MeasureBase* mb);
     void createDefaultHeader(Score* const score);

@@ -44,9 +44,6 @@ class KeyEditor : public QWidget, Ui::KeyEdit
 
 public:
     KeyEditor(QWidget* parent = 0);
-#ifdef MU_QT5_COMPAT
-    KeyEditor(const KeyEditor& widget);
-#endif
 
     bool dirty() const { return m_dirty; }
     void save();
@@ -68,6 +65,8 @@ private:
 
     bool m_dirty = false;
 };
+
+static const int KEYEDIT_ACC_ZERO_POINT = 3;
 }
 
 #endif

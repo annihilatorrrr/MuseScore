@@ -105,6 +105,7 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/iaudiopluginmetareader.h
     ${CMAKE_CURRENT_LIST_DIR}/iaudiopluginmetareaderregister.h
     ${CMAKE_CURRENT_LIST_DIR}/iregisteraudiopluginsscenario.h
+    ${CMAKE_CURRENT_LIST_DIR}/devtools/inputlag.h
 
     # Common internal
     ${CMAKE_CURRENT_LIST_DIR}/internal/audioconfiguration.cpp
@@ -168,8 +169,8 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/equaliser.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/trackshandler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/trackshandler.h
-    ${CMAKE_CURRENT_LIST_DIR}/internal/worker/playerhandler.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/internal/worker/playerhandler.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/worker/player.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/worker/player.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/audiooutputhandler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/audiooutputhandler.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/worker/itracksequence.h
@@ -274,10 +275,22 @@ if (MUSE_MODULE_AUDIO_EXPORT)
         )
 
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/lame lame)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/opusenc opusenc)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/flac flac)
+    set(MODULE_LINK
+        ${MODULE_LINK}
+        lame
+    )
 
-    set(MODULE_LINK ${MODULE_LINK} lame opusenc flac)
+    include(cmake/SetupOpusEnc.cmake)
+    set(MODULE_LINK
+        ${MODULE_LINK}
+        ${LIBOPUSENC_TARGETS}
+    )
+
+    include(cmake/SetupFlac.cmake)
+    set(MODULE_LINK
+        ${MODULE_LINK}
+        ${FLAC_TARGETS}
+    )
 endif()
 
 if (ARCH_IS_X86_64)

@@ -4,7 +4,7 @@
 # MuseScore Studio
 # Music Composition & Notation
 #
-# Copyright (C) 2021 MuseScore Limited
+# Copyright (C) 2024 MuseScore Limited
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -51,8 +51,8 @@ set(MUSESCORE_BUILD_CONFIGURATION "app" CACHE STRING "Build configuration")
 # - vtest           - for visual tests (for CI)
 # - utest           - for unit tests (for CI)
 
-set(MUSESCORE_BUILD_MODE "dev" CACHE STRING "Build mode")
-# Possible MUSESCORE_BUILD_MODE values:
+set(MUSE_APP_BUILD_MODE "dev" CACHE STRING "Build mode")
+# Possible MUSE_APP_BUILD_MODE values:
 # - dev     - for development/nightly builds
 # - testing - for testing versions (alpha, beta, RC)
 # - release - for stable release builds
@@ -93,13 +93,18 @@ option(MUE_INSTALL_SOUNDFONT "Install sound font" ON)
 set(MUE_VTEST_MSCORE_REF_BIN "${CMAKE_CURRENT_LIST_DIR}/../MU_ORIGIN/MuseScore/build.debug/install/${INSTALL_SUBDIR}/mscore" CACHE PATH "Path to mscore ref bin")
 
 # === Compile ===
-option(MUE_COMPILE_QT5_COMPAT "Build with Qt5" OFF)
 option(MUE_COMPILE_INSTALL_QTQML_FILES "Whether to bundle qml files along with the installation (relevant on MacOS only)" ON)
 option(MUE_COMPILE_USE_UNITY "Use unity build." ON)
 option(MUE_COMPILE_USE_CCACHE "Try use ccache" ON)
 option(MUE_COMPILE_USE_SHARED_LIBS_IN_DEBUG "Build shared libs if possible in debug" OFF)
-option(MUE_COMPILE_USE_SYSTEM_FREETYPE "Try use system freetype" OFF) # Important for the maintainer of Linux distributions
-option(MUE_COMPILE_USE_SYSTEM_OPUS "Try use system opus" OFF) # Important for the maintainers of Linux distributions
+
+# === System libraries ===
+# Important for the maintainers of Linux distributions
+option(MUE_COMPILE_USE_SYSTEM_FLAC "Try use system flac" OFF)
+option(MUE_COMPILE_USE_SYSTEM_FREETYPE "Try use system freetype" OFF)
+option(MUE_COMPILE_USE_SYSTEM_OPUS "Try use system opus" OFF)
+option(MUE_COMPILE_USE_SYSTEM_OPUSENC "Try use system libopusenc" OFF)
+option(MUE_COMPILE_USE_SYSTEM_TINYXML "Try use system tinyxml" OFF)
 
 # === Debug ===
 option(MUE_ENABLE_LOAD_QML_FROM_SOURCE "Load qml files from source (not resource)" OFF)
@@ -135,13 +140,9 @@ endif(MUE_COMPILE_USE_CCACHE)
 ###########################################
 # Setup external dependencies
 ###########################################
-if (MUE_COMPILE_QT5_COMPAT)
-    set(QT_MIN_VERSION "5.15.0")
-    include(FindQt5)
-else()
-    set(QT_MIN_VERSION "6.2.4")
-    include(FindQt6)
-endif()
+
+set(QT_MIN_VERSION "6.2.4")
+include(FindQt6)
 
 if (MUE_DOWNLOAD_SOUNDFONT)
     include(DownloadSoundFont)
@@ -150,6 +151,11 @@ endif(MUE_DOWNLOAD_SOUNDFONT)
 ###########################################
 # Add source tree
 ###########################################
+if (MUSE_ENABLE_UNIT_TESTS)
+    enable_testing()
+    message(STATUS "Enabled testing")
+endif()
+
 add_subdirectory(share)
 add_subdirectory(src)
 

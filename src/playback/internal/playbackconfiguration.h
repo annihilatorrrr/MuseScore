@@ -27,11 +27,13 @@
 
 #include "modularity/ioc.h"
 #include "musesampler/imusesamplerinfo.h"
+#include "audio/iaudioconfiguration.h"
 
 namespace mu::playback {
 class PlaybackConfiguration : public IPlaybackConfiguration, public muse::async::Asyncable
 {
     INJECT(muse::musesampler::IMuseSamplerInfo, musesamplerInfo)
+    INJECT(muse::audio::IAudioConfiguration, audioConfiguration)
 
 public:
     void init();
@@ -74,8 +76,13 @@ public:
     bool soundPresetsMultiSelectionEnabled() const override;
     void setSoundPresetsMultiSelectionEnabled(bool enabled) override;
 
-    bool needToShowChangeSoundWarning() const override;
-    void setNeedToShowChangeSoundWarning(bool show) override;
+    bool needToShowResetSoundFlagsWhenChangeSoundWarning() const override;
+    void setNeedToShowResetSoundFlagsWhenChangeSoundWarning(bool show) override;
+
+    bool needToShowResetSoundFlagsWhenChangePlaybackProfileWarning() const override;
+    void setNeedToShowResetSoundFlagsWhenChangePlaybackProfileWarning(bool show) override;
+
+    bool shouldMeasureInputLag() const override;
 
 private:
     const SoundProfileName& fallbackSoundProfileStr() const;

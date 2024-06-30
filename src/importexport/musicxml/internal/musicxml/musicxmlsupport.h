@@ -26,6 +26,7 @@
 #include "engraving/types/fraction.h"
 #include "engraving/dom/mscore.h"
 #include "engraving/dom/note.h"
+#include "engraving/dom/fret.h"
 
 namespace muse {
 class XmlStreamReader;
@@ -73,6 +74,27 @@ struct MusicXmlArpeggioDesc {
         : arp(arp), no(no) {}
 };
 typedef std::multimap<int, MusicXmlArpeggioDesc> ArpeggioMap;
+
+/**
+ The description of a chord symbol with or without a fret diagram
+ */
+
+struct HarmonyDesc
+{
+    track_idx_t m_track;
+    bool fretDiagramVisible() const { return m_fretDiagram ? m_fretDiagram->visible() : false; }
+    Harmony* m_harmony;
+    FretDiagram* m_fretDiagram;
+
+    HarmonyDesc(track_idx_t m_track, Harmony* m_harmony, FretDiagram* m_fretDiagram)
+        : m_track(m_track), m_harmony(m_harmony),
+        m_fretDiagram(m_fretDiagram) {}
+
+    HarmonyDesc()
+        : m_track(0), m_harmony(nullptr), m_fretDiagram(nullptr) {}
+};
+
+using HarmonyMap = std::multimap<int, HarmonyDesc>;
 
 //---------------------------------------------------------
 //   VoiceDesc
@@ -199,6 +221,21 @@ struct MusicXMLInstrument {
      */
 };
 
+struct InferredPercInstr {
+    int pitch;
+    track_idx_t track;
+    String name;
+    Fraction tick;
+
+    InferredPercInstr(int pitch, track_idx_t track, String name, Fraction tick)
+        : pitch(pitch), track(track), name(name), tick(tick) {}
+
+    InferredPercInstr()
+        : pitch(-1), track(muse::nidx), name(u""), tick(Fraction(0, -1)) {}
+};
+
+typedef std::vector<InferredPercInstr> InferredPercList;
+
 /**
  A MusicXML drumset or set of instruments in a multi-instrument part.
  */
@@ -222,6 +259,7 @@ extern String accSymId2SmuflMxmlString(const SymId id);
 extern String accidentalType2MxmlString(const AccidentalType type);
 extern String accidentalType2SmuflMxmlString(const AccidentalType type);
 extern AccidentalType mxmlString2accidentalType(const String mxmlName, const String smufl);
+extern String mxmlAccidentalTextToChar(const String mxmlName);
 extern SymId mxmlString2accSymId(const String mxmlName, const String smufl = {});
 extern AccidentalType microtonalGuess(double val);
 extern bool isLaissezVibrer(const SymId id);

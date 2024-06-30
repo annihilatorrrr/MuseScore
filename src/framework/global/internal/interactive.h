@@ -29,14 +29,20 @@
 #include "ui/imainwindow.h"
 
 #include "../iinteractive.h"
+#include "shortcuts/ishortcutsregister.h"
 
 namespace muse {
-class Interactive : public IInteractive, public async::Asyncable
+class Interactive : public IInteractive, public Injectable, public async::Asyncable
 {
-    Inject<muse::ui::IInteractiveProvider> provider;
-    Inject<muse::ui::IMainWindow> mainWindow;
+    Inject<muse::ui::IInteractiveProvider> provider = { this };
+    Inject<muse::ui::IMainWindow> mainWindow = { this };
+    Inject<shortcuts::IShortcutsRegister> shortcutsRegister = { this };
 
 public:
+
+    Interactive(const muse::modularity::ContextPtr& ctx)
+        : Injectable(ctx) {}
+
     // question
     Result question(const std::string& title, const std::string& text, const Buttons& buttons, const Button& def = Button::NoButton,
                     const Options& options = {}) const override;
@@ -110,7 +116,9 @@ public:
     Ret openUrl(const std::string& url) const override;
     Ret openUrl(const QUrl& url) const override;
 
-    async::Promise<Ret> openApp(const std::string& appIdentifier) const override;
+    Ret isAppExists(const std::string& appIdentifier) const override;
+    Ret canOpenApp(const Uri& uri) const override;
+    async::Promise<Ret> openApp(const Uri& uri) const override;
 
     Ret revealInFileBrowser(const io::path_t& filePath) const override;
 

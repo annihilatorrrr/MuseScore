@@ -51,22 +51,26 @@ static Accidental* accidental(muse::XmlStreamReader& e, Score* score)
     const bool cautionary = e.asciiAttribute("cautionary") == "yes";
     const bool editorial = e.asciiAttribute("editorial") == "yes";
     const bool parentheses = e.asciiAttribute("parentheses") == "yes";
+    const bool noParentheses = e.asciiAttribute("parentheses") == "no";
     const bool brackets = e.asciiAttribute("bracket") == "yes";
+    const bool noBrackets = e.asciiAttribute("bracket") == "no";
     const Color accColor = Color(e.asciiAttribute("color").ascii());
-    String smufl = e.attribute("smufl");
+    const String smufl = e.attribute("smufl");
 
     const String s = e.readText();
     const AccidentalType type = mxmlString2accidentalType(s, smufl);
 
     if (type != AccidentalType::NONE) {
-        auto a = Factory::createAccidental(score->dummy());
+        Accidental* a = Factory::createAccidental(score->dummy());
         a->setAccidentalType(type);
-        if (cautionary || parentheses) {
+        if (cautionary || editorial) { // no way to tell one from the other
+            a->setRole(AccidentalRole::USER);
+        } // except via the use of parentheses vs. brackets
+        if (noParentheses || noBrackets) { // explicitly none wanted
+        } else if (parentheses || cautionary) { // set to "yes" or "cautionary" and not set at all
             a->setBracket(AccidentalBracket(AccidentalBracket::PARENTHESIS));
-            a->setRole(AccidentalRole::USER);
-        } else if (editorial || brackets) {
+        } else if (brackets || editorial) { // set to "yes" or "editorial" and not set at all
             a->setBracket(AccidentalBracket(AccidentalBracket::BRACKET));
-            a->setRole(AccidentalRole::USER);
         }
         if (accColor.isValid()) {
             a->setColor(accColor);
@@ -74,7 +78,7 @@ static Accidental* accidental(muse::XmlStreamReader& e, Score* score)
         return a;
     }
 
-    return 0;
+    return nullptr;
 }
 
 //---------------------------------------------------------
@@ -135,7 +139,7 @@ void MxmlNotePitch::pitch(muse::XmlStreamReader& e)
             if (!ok || m_alter < -2 || m_alter > 2) {
                 m_logger->logError(String(u"invalid alter '%1'").arg(alter), &e);
                 bool ok2;
-                const auto altervalue = alter.toDouble(&ok2);
+                const double altervalue = alter.toDouble(&ok2);
                 if (ok2 && (std::abs(altervalue) < 2.0) && (m_accType == AccidentalType::NONE)) {
                     // try to see if a microtonal accidental is needed
                     m_accType = microtonalGuess(altervalue);

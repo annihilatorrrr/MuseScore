@@ -36,8 +36,9 @@
 #include "cloud/clouderrors.h"
 #include "engraving/infrastructure/mscio.h"
 #include "engraving/engravingerrors.h"
-#include "network/networkerrors.h"
+
 #include "projecterrors.h"
+#include "projectextensionpoints.h"
 
 #include "log.h"
 
@@ -248,8 +249,19 @@ Ret ProjectActionsController::openProject(const muse::io::path_t& givenPath, con
 
     //! Step 5. If it's a cloud project, download the latest version
     if (configuration()->isCloudProject(actualPath) && !configuration()->isLegacyCloudProject(actualPath)) {
-        downloadAndOpenCloudProject(configuration()->cloudScoreIdFromPath(actualPath));
-        return make_ret(Ret::Code::Ok);
+        bool isCloudAvailable = museScoreComService()->authorization()->checkCloudIsAvailable();
+        if (isCloudAvailable) {
+            downloadAndOpenCloudProject(configuration()->cloudScoreIdFromPath(actualPath));
+            return make_ret(Ret::Code::Ok);
+        }
+
+        if (fileSystem()->exists(actualPath)) {
+            return doOpenCloudProjectOffline(actualPath, displayNameOverride);
+        }
+
+        Ret ret = make_ret(cloud::Err::NetworkError);
+        openSaveProjectScenario()->showCloudOpenError(ret);
+        return ret;
     }
 
     //! Step 6. Open project in the current window
@@ -260,7 +272,7 @@ RetVal<INotationProjectPtr> ProjectActionsController::loadProject(const muse::io
 {
     TRACEFUNC;
 
-    auto project = projectCreator()->newProject();
+    auto project = projectCreator()->newProject(iocContext());
     IF_ASSERT_FAILED(project) {
         return make_ret(Ret::Code::InternalError);
     }
@@ -349,8 +361,28 @@ Ret ProjectActionsController::doOpenCloudProject(const muse::io::path_t& filePat
     return doFinishOpenProject();
 }
 
+muse::Ret ProjectActionsController::doOpenCloudProjectOffline(const muse::io::path_t& filePath, const QString& displayNameOverride)
+{
+    RetVal<INotationProjectPtr> rv = loadProject(filePath);
+    if (!rv.ret) {
+        return rv.ret;
+    }
+
+    INotationProjectPtr project = rv.val;
+    CloudProjectInfo info = project->cloudInfo();
+    info.name = displayNameOverride;
+    project->setCloudInfo(info);
+
+    recentFilesController()->prependRecentFile(makeRecentFile(project));
+    globalContext()->setCurrentProject(project);
+
+    return doFinishOpenProject();
+}
+
 Ret ProjectActionsController::doFinishOpenProject()
 {
+    extensionsProvider()->performPointAsync(EXEC_ONPOST_PROJECT_OPENED);
+
     //! Show MuseSampler update if need
     async::Channel<Uri> opened = interactive()->opened();
     opened.onReceive(this, [this, opened](const Uri&) {
@@ -359,7 +391,7 @@ Ret ProjectActionsController::doFinishOpenProject()
             mut.resetOnReceive(this);
 
             QTimer::singleShot(5000, [this]() {
-                updateScenario()->checkForMuseSamplerUpdate();
+                museSoundsCheckUpdateScenario()->checkForUpdate();
             });
         });
     });
@@ -395,6 +427,7 @@ void ProjectActionsController::downloadAndOpenCloudProject(int scoreId, const QS
     }
 
     CloudProjectInfo info;
+    muse::io::path_t localPath = configuration()->cloudProjectPath(scoreId);
 
     if (isOwner) {
         RetVal<muse::cloud::ScoreInfo> scoreInfo = museScoreComService()->downloadScoreInfo(scoreId);
@@ -408,10 +441,20 @@ void ProjectActionsController::downloadAndOpenCloudProject(int scoreId, const QS
         info.visibility = scoreInfo.val.visibility;
         info.sourceUrl = scoreInfo.val.url;
         info.revisionId = scoreInfo.val.revisionId;
+
+        RetVal<CloudProjectInfo> localInfo = mscMetaReader()->readCloudProjectInfo(localPath);
+
+        if (localInfo.ret) {
+            if (localInfo.val.revisionId == scoreInfo.val.revisionId) {
+                doOpenCloudProject(localPath, info, isOwner);
+                return;
+            }
+        } else {
+            LOGE() << localInfo.ret;
+        }
     }
 
     // TODO(cloud): conflict checking (don't recklessly overwrite the existing file)
-    muse::io::path_t localPath = configuration()->cloudProjectPath(scoreId);
     QFile* projectData = new QFile(localPath.toQString());
     if (!projectData->open(QIODevice::WriteOnly)) {
         openSaveProjectScenario()->showCloudOpenError(make_ret(Err::FileOpenError));
@@ -607,6 +650,8 @@ void ProjectActionsController::newProject()
     Ret ret = interactive()->open(NEW_SCORE_URI).ret;
 
     if (ret) {
+        extensionsProvider()->performPointAsync(EXEC_ONPOST_PROJECT_CREATED);
+
         ret = doFinishOpenProject();
     }
 
@@ -874,11 +919,23 @@ bool ProjectActionsController::saveProjectLocally(const muse::io::path_t& filePa
         return false;
     }
 
-    Ret ret = project->save(filePath, saveMode);
+    Ret ret = make_ok();
+    if (saveMode == SaveMode::Save) {
+        ret = extensionsProvider()->performPoint(EXEC_ONPRE_PROJECT_SAVE);
+    }
+
+    if (ret) {
+        ret = project->save(filePath, saveMode);
+    }
+
     if (!ret) {
         LOGE() << ret.toString();
         warnScoreCouldnotBeSaved(ret);
         return false;
+    }
+
+    if (saveMode == SaveMode::Save) {
+        ret = extensionsProvider()->performPoint(EXEC_ONPOST_PROJECT_SAVED);
     }
 
     recentFilesController()->prependRecentFile(makeRecentFile(project));
@@ -1616,14 +1673,14 @@ bool ProjectActionsController::askIfUserAgreesToOpenProjectWithIncompatibleVersi
 void ProjectActionsController::warnFileTooNew(const muse::io::path_t& filepath)
 {
     interactive()->error(muse::qtrc("project", "Cannot read file %1").arg(io::toNativeSeparators(filepath).toQString()).toStdString(),
-                         muse::trc("project", "This file was saved using a newer version of MuseScore. "
+                         muse::trc("project", "This file was saved using a newer version of MuseScore Studio. "
                                               "Please visit <a href=\"https://musescore.org\">musescore.org</a> to obtain the latest version."));
 }
 
 bool ProjectActionsController::askIfUserAgreesToOpenCorruptedProject(const String& projectName, const std::string& errorText)
 {
     std::string title = muse::mtrc("project", "File “%1” is corrupted").arg(projectName).toStdString();
-    std::string body = muse::trc("project", "This file contains errors that could cause MuseScore to malfunction.");
+    std::string body = muse::trc("project", "This file contains errors that could cause MuseScore Studio to malfunction.");
 
     IInteractive::ButtonData openAnywayBtn(IInteractive::Button::CustomButton, muse::trc("project", "Open anyway"), true /*accent*/);
 
@@ -1662,7 +1719,8 @@ void ProjectActionsController::warnProjectCannotBeOpened(const Ret& ret, const m
         body = muse::trc("project", "This file does not exist or cannot be accessed at the moment.");
         break;
     case int(engraving::Err::FileOpenError):
-        body = muse::trc("project", "This file could not be opened. Please make sure that MuseScore has permission to read this file.");
+        body = muse::trc("project",
+                         "This file could not be opened. Please make sure that MuseScore Studio has permission to read this file.");
         break;
     default:
         if (!ret.text().empty()) {

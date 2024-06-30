@@ -181,11 +181,11 @@ EditDrumsetDialog::EditDrumsetDialog(QWidget* parent)
     connect(pitchList, &QTreeWidget::currentItemChanged, this, &EditDrumsetDialog::itemChanged);
     connect(buttonBox, &QDialogButtonBox::clicked, this, &EditDrumsetDialog::bboxClicked);
     connect(name, &QLineEdit::textChanged, this, &EditDrumsetDialog::nameChanged);
-    connect(noteHead, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &EditDrumsetDialog::valueChanged);
-    connect(staffLine, QOverload<int>::of(&QSpinBox::valueChanged), this, &EditDrumsetDialog::valueChanged);
-    connect(voice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &EditDrumsetDialog::valueChanged);
-    connect(stemDirection, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &EditDrumsetDialog::valueChanged);
-    connect(shortcut, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &EditDrumsetDialog::shortcutChanged);
+    connect(noteHead, &QComboBox::currentIndexChanged, this, &EditDrumsetDialog::valueChanged);
+    connect(staffLine, &QSpinBox::valueChanged, this, &EditDrumsetDialog::valueChanged);
+    connect(voice, &QComboBox::currentIndexChanged, this, &EditDrumsetDialog::valueChanged);
+    connect(stemDirection, &QComboBox::currentIndexChanged, this, &EditDrumsetDialog::valueChanged);
+    connect(shortcut, &QComboBox::currentIndexChanged, this, &EditDrumsetDialog::shortcutChanged);
     connect(loadButton, &QPushButton::clicked, this, &EditDrumsetDialog::load);
     connect(saveButton, &QPushButton::clicked, this, &EditDrumsetDialog::save);
     pitchList->setColumnWidth(0, 40);
@@ -267,7 +267,7 @@ EditDrumsetDialog::EditDrumsetDialog(QWidget* parent)
     doubleWholeCmb->setCurrentIndex(quarterCmb->findData(SymNames::nameForSymId(SymId::noteheadDoubleWhole).ascii()));
 
     connect(customGbox, &QGroupBox::toggled, this, &EditDrumsetDialog::customGboxToggled);
-    connect(quarterCmb, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &EditDrumsetDialog::customQuarterChanged);
+    connect(quarterCmb, &QComboBox::currentIndexChanged, this, &EditDrumsetDialog::customQuarterChanged);
 
     Q_ASSERT(pitchList->topLevelItemCount() > 0);
     pitchList->setCurrentItem(pitchList->topLevelItem(0));
@@ -280,14 +280,6 @@ EditDrumsetDialog::EditDrumsetDialog(QWidget* parent)
     //! NOTE: It is necessary for the correct start of navigation in the dialog
     setFocus();
 }
-
-#ifdef MU_QT5_COMPAT
-EditDrumsetDialog::EditDrumsetDialog(const EditDrumsetDialog& other)
-    : QDialog(other.parentWidget())
-{
-}
-
-#endif
 
 //---------------------------------------------------------
 //   customGboxToggled
@@ -662,7 +654,7 @@ void EditDrumsetDialog::load()
             if (e.attribute("version") != Constants::MSC_VERSION_STR) {
                 auto result = interactive()->warning(
                     muse::trc("palette", "Drumset file too old"),
-                    muse::trc("palette", "MuseScore may not be able to load this drumset file."), {
+                    muse::trc("palette", "MuseScore Studio may not be able to load this drumset file."), {
                     muse::IInteractive::Button::Cancel,
                     muse::IInteractive::Button::Ignore
                 }, muse::IInteractive::Button::Cancel);

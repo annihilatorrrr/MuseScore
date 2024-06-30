@@ -837,7 +837,7 @@ String Note::tpcUserName(int tpc, int pitch, bool explicitAccidental, bool full)
         pitchStr.replace(u"#", u"♯");
     }
 
-    pitchStr = muse::mtrc("engraving", pitchStr);
+    pitchStr = muse::mtrc("global", pitchStr);
 
     const String octaveStr = String::number(((pitch - static_cast<int>(tpc2alter(tpc))) / PITCH_DELTA_OCTAVE) - 1);
 
@@ -944,6 +944,7 @@ SymId Note::noteHead() const
 
     const Staff* st = chord() ? chord()->staff() : nullptr;
 
+    NoteHeadGroup headGroup = m_headGroup;
     if (m_headGroup == NoteHeadGroup::HEAD_CUSTOM) {
         if (st) {
             if (st->staffTypeForElement(chord())->isDrumStaff()) {
@@ -956,6 +957,8 @@ SymId Note::noteHead() const
                     LOGD("no drumset");
                     return noteHead(up, NoteHeadGroup::HEAD_NORMAL, ht);
                 }
+            } else {
+                headGroup = NoteHeadGroup::HEAD_NORMAL;
             }
         } else {
             return ldata()->cachedNoteheadSym.value();
@@ -976,9 +979,9 @@ SymId Note::noteHead() const
     if (scheme == NoteHeadScheme::HEAD_AUTO) {
         scheme = NoteHeadScheme::HEAD_NORMAL;
     }
-    SymId t = noteHead(up, m_headGroup, ht, tpc(), key, scheme);
+    SymId t = noteHead(up, headGroup, ht, tpc(), key, scheme);
     if (t == SymId::noSym) {
-        LOGD("invalid notehead %d/%d", int(m_headGroup), int(ht));
+        LOGD("invalid notehead %d/%d", int(headGroup), int(ht));
         t = noteHead(up, NoteHeadGroup::HEAD_NORMAL, ht);
     }
     return t;
@@ -1876,6 +1879,7 @@ EngravingItem* Note::drop(EditData& data)
     {
         // calculate correct transposed tpc
         Note* n = toNote(e);
+        const Segment* segment = ch->segment();
         Interval v = staff()->transpose(ch->tick());
         v.flip();
         n->setTpc2(mu::engraving::transposeTpc(n->tpc1(), v, true));
@@ -1886,6 +1890,15 @@ EngravingItem* Note::drop(EditData& data)
             n->tieBack()->setEndNote(n);
             this->setTieBack(nullptr);
         }
+        // Set correct stem direction for drum staves
+        const StaffGroup staffGroup = st->staffType(segment->tick())->group();
+        DirectionV stemDirection = DirectionV::AUTO;
+        if (staffGroup == StaffGroup::PERCUSSION) {
+            const Drumset* ds = st->part()->instrument(segment->tick())->drumset();
+            stemDirection = ds->stemDirection(n->noteVal().pitch);
+        }
+        ch->setStemDirection(stemDirection);
+
         score()->undoRemoveElement(this);
         score()->undoAddElement(n);
         return n;
@@ -3794,6 +3807,6 @@ void Note::addLineAttachPoint(PointF point, EngravingItem* line)
 
 bool Note::negativeFretUsed() const
 {
-    return engravingConfiguration()->negativeFretsAllowed() && m_fret < 0;
+    return configuration()->negativeFretsAllowed() && m_fret < 0;
 }
 }

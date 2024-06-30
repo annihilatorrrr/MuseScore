@@ -190,6 +190,7 @@ public:
     static void utf16to8(std::u16string_view src, std::string& dst);
     static void utf8to32(std::string_view src, std::u32string& dst);
     static void utf32to8(std::u32string_view src, std::string& dst);
+    static void replaceInvalid(std::string_view src, std::string& dst);
     static bool isValidUtf8(const std::string_view& src);
 };
 
@@ -255,6 +256,7 @@ public:
     String& prepend(const String& s);
 
     static String fromUtf16LE(const ByteArray& data);
+    static String fromUtf16BE(const ByteArray& data);
 
     static String fromUtf8(const char* str);
     static String fromUtf8(const ByteArray& data);
@@ -271,6 +273,9 @@ public:
     static String fromUcs4(char32_t chr);
     std::u32string toStdU32String() const;
 
+    std::wstring toStdWString() const;
+    static const String fromStdWString(const std::wstring& str);
+
     size_t size() const;
     bool empty() const;
     inline bool isEmpty() const { return empty(); }
@@ -282,6 +287,7 @@ public:
     bool contains(const String& str, CaseSensitivity cs = CaseSensitive) const;
     bool contains(const std::wregex& re) const;
     int count(const Char& ch) const;
+    int count(const String& str) const;
     size_t indexOf(const Char& ch, size_t from = 0) const;
     size_t indexOf(const String& str, size_t from = 0) const;
     size_t indexOf(const char16_t* str, size_t from = 0) const;
@@ -393,6 +399,7 @@ public:
     String join(const String& sep) const;
 
     void insert(size_t idx, const String& str);
+    void insert(const_iterator it, const String& str);
     void replace(size_t idx, const String& str);
     bool removeAll(const String& str);
     void removeAt(size_t i);
@@ -464,7 +471,7 @@ private:
 
 inline String operator+(char16_t s1, const String& s2) { String t(s1); t += s2; return t; }
 inline String operator+(const char16_t* s1, const String& s2) { String t(s1); t += s2; return t; }
-}
+} // namespace muse
 
 // ============================
 // Char (UTF-16)

@@ -27,7 +27,6 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/appshellmodule.cpp
     ${CMAKE_CURRENT_LIST_DIR}/appshellmodule.h
     ${CMAKE_CURRENT_LIST_DIR}/iappshellconfiguration.h
-    ${CMAKE_CURRENT_LIST_DIR}/iapplicationactioncontroller.h
     ${CMAKE_CURRENT_LIST_DIR}/appshelltypes.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/applicationuiactions.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/applicationuiactions.h
@@ -95,8 +94,6 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/framelesswindow/framelesswindowmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/publish/publishtoolbarmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/publish/publishtoolbarmodel.h
-    ${CMAKE_CURRENT_LIST_DIR}/view/windowdroparea.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/view/windowdroparea.h
     ${CMAKE_CURRENT_LIST_DIR}/view/internal/iappmenumodelhook.h
     ${CMAKE_CURRENT_LIST_DIR}/view/internal/maintoolbarmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/internal/maintoolbarmodel.h
@@ -146,11 +143,7 @@ if (NOT OS_IS_MAC)
     )
 
     # we use QKeyMapper to fix https://github.com/musescore/MuseScore/issues/10181
-    if (MUE_COMPILE_QT5_COMPAT)
-        set(MODULE_INCLUDE ${Qt5Gui_PRIVATE_INCLUDE_DIRS} )
-    else()
-        set(MODULE_INCLUDE ${Qt6Gui_PRIVATE_INCLUDE_DIRS} )
-    endif()
+    set(MODULE_INCLUDE ${Qt6Gui_PRIVATE_INCLUDE_DIRS} )
 endif(NOT OS_IS_MAC)
 
 setup_module()

@@ -29,13 +29,11 @@ df -h .
 
 BUILD_TOOLS=$HOME/build_tools
 ENV_FILE=$BUILD_TOOLS/environment.sh
-QT5_COMPAT="OFF"
 COMPILER="gcc" # gcc, clang
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --compiler) COMPILER="$2"; shift ;;
-        --qt5_compat) QT5_COMPAT="$2"; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -131,16 +129,13 @@ sudo apt-get install -y --no-install-recommends \
 
 # Get newer Qt (only used cached version if it is the same)
 qt_version="624"
-if [ "$QT5_COMPAT" == "ON" ]; then
-  qt_version="5152"
-fi
-
 qt_dir="$BUILD_TOOLS/Qt/${qt_version}"
 if [[ ! -d "${qt_dir}" ]]; then
   mkdir -p "${qt_dir}"
   qt_url="https://s3.amazonaws.com/utils.musescore.org/Qt${qt_version}_gcc64.7z"
   wget -q --show-progress -O qt.7z "${qt_url}"
   7z x -y qt.7z -o"${qt_dir}"
+  rm qt.7z
 fi
 
 echo export PATH="${qt_dir}/bin:\${PATH}" >> ${ENV_FILE}
@@ -184,11 +179,11 @@ fi
 
 # CMAKE
 # Get newer CMake (only used cached version if it is the same)
-cmake_version="3.16.0"
+cmake_version="3.24.0"
 cmake_dir="$BUILD_TOOLS/cmake/${cmake_version}"
 if [[ ! -d "$cmake_dir" ]]; then
   mkdir -p "$cmake_dir"
-  cmake_url="https://cmake.org/files/v${cmake_version%.*}/cmake-${cmake_version}-Linux-x86_64.tar.gz"
+  cmake_url="https://cmake.org/files/v${cmake_version%.*}/cmake-${cmake_version}-linux-x86_64.tar.gz" 
   wget -q --show-progress --no-check-certificate -O - "${cmake_url}" | tar --strip-components=1 -xz -C "${cmake_dir}"
 fi
 echo export PATH="$cmake_dir/bin:\${PATH}" >> ${ENV_FILE}

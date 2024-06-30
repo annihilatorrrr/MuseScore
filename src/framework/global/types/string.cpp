@@ -262,6 +262,15 @@ bool UtfCodec::isValidUtf8(const std::string_view& src)
     return utf8::is_valid(src.begin(), src.end());
 }
 
+void UtfCodec::replaceInvalid(std::string_view src, std::string& dst)
+{
+    try {
+        utf8::replace_invalid(src.begin(), src.end(), std::back_inserter(dst));
+    } catch (const std::exception& e) {
+        LOGE() << e.what();
+    }
+}
+
 // ============================
 // String
 // ============================
@@ -498,6 +507,38 @@ String String::fromUtf16LE(const ByteArray& data)
     return u16;
 }
 
+String String::fromUtf16BE(const ByteArray& data)
+{
+    //make sure len is divisible by 2
+    size_t len = data.size();
+    if (len % 2) {
+        len--;
+    }
+
+    if (len < 2) {
+        return String();
+    }
+
+    String u16;
+    u16.reserve(len / 2);
+    String::Mutator mut = u16.mutStr();
+
+    const uint8_t* d = data.constData();
+    size_t start = 0;
+    if (std::memcmp(d, U16BE_BOM, 2) == 0) {
+        start += 2;
+    }
+
+    for (size_t i = start; i < len;) {
+        //big-endian
+        int hi = d[i++] & 0xFF;
+        int lo = d[i++] & 0xFF;
+        mut.push_back(hi << 8 | lo);
+    }
+
+    return u16;
+}
+
 String String::fromUtf8(const char* str)
 {
     if (!str) {
@@ -616,6 +657,35 @@ std::u32string String::toStdU32String() const
     return s32;
 }
 
+std::wstring String::toStdWString() const
+{
+    const std::u16string& u16 = constStr();
+    std::wstring ws;
+    ws.resize(u16.size());
+
+    static_assert(sizeof(wchar_t) >= sizeof(char16_t));
+
+    for (size_t i = 0; i < ws.size(); ++i) {
+        ws[i] = static_cast<wchar_t>(u16.at(i));
+    }
+
+    return ws;
+}
+
+const String String::fromStdWString(const std::wstring& str)
+{
+    String s;
+    s.mutStr().resize(str.size());
+
+    static_assert(sizeof(wchar_t) >= sizeof(char16_t));
+
+    for (size_t i = 0; i < str.size(); ++i) {
+        s[i] = static_cast<char16_t>(str.at(i));
+    }
+
+    return s;
+}
+
 #ifndef NO_QT_SUPPORT
 String String::fromQString(const QString& str)
 {
@@ -679,15 +749,7 @@ bool String::contains(const String& str, CaseSensitivity cs) const
 
 bool String::contains(const std::wregex& re) const
 {
-    const std::u16string& u16 = constStr();
-    std::wstring ws;
-    ws.resize(u16.size());
-
-    static_assert(sizeof(wchar_t) >= sizeof(char16_t));
-
-    for (size_t i = 0; i < ws.size(); ++i) {
-        ws[i] = static_cast<wchar_t>(u16.at(i));
-    }
+    std::wstring ws = toStdWString();
 
     auto words_begin = std::wsregex_iterator(ws.begin(), ws.end(), re);
     if (words_begin != std::wsregex_iterator()) {
@@ -703,6 +765,18 @@ int String::count(const Char& ch) const
         if (constStr().at(i) == ch.unicode()) {
             ++count;
         }
+    }
+    return count;
+}
+
+int String::count(const String& str) const
+{
+    int count = 0;
+    std::string::size_type pos = 0;
+    std::u16string otherStr = str.constStr();
+    while ((pos = constStr().find(otherStr, pos)) != std::string::npos) {
+        ++count;
+        pos += str.size();
     }
     return count;
 }
@@ -1324,6 +1398,11 @@ String StringList::join(const String& sep) const
 void StringList::insert(size_t idx, const String& str)
 {
     std::vector<String>::insert(begin() + idx, str);
+}
+
+void StringList::insert(const_iterator it, const String& str)
+{
+    std::vector<String>::insert(it, str);
 }
 
 void StringList::replace(size_t idx, const String& str)

@@ -33,8 +33,19 @@
 using namespace mu::engraving;
 using namespace muse::mpe;
 
+static const PlaybackSetupData PIANO_SETUP_DATA = {
+    SoundId::Piano, SoundCategory::Keyboards
+};
+
 void PlaybackSetupDataResolver::resolveSetupData(const Instrument* instrument, PlaybackSetupData& result) const
 {
+    if (!instrument->soundId().empty()) {
+        result = PlaybackSetupData::fromString(instrument->soundId());
+        result.supportsSingleNoteDynamics = instrument->singleNoteDynamics();
+        result.musicXmlSoundId = std::make_optional(instrument->musicXmlId().toStdString());
+        return;
+    }
+
     if (KeyboardsSetupDataResolver::resolve(instrument, result)) {
         return;
     }
@@ -55,33 +66,31 @@ void PlaybackSetupDataResolver::resolveSetupData(const Instrument* instrument, P
         return;
     }
 
-    LOGE() << "Unable to resolve setup data for instrument, id: " << instrument->id()
-           << ", family: " << instrument->family();
+    LOGW() << "Unable to resolve setup data for instrument, id: " << instrument->id()
+           << ", family: " << instrument->family() << "; fallback to piano";
+
+    result = PIANO_SETUP_DATA;
 }
 
 void PlaybackSetupDataResolver::resolveChordSymbolsSetupData(const Instrument* instrument, PlaybackSetupData& result) const
 {
     if (instrument->hasStrings()) {
-        static const PlaybackSetupData CHORD_SYMBOLS_SETUP_DATA = {
+        static const PlaybackSetupData GUITAR_SETUP_DATA = {
             SoundId::Guitar, SoundCategory::Strings, { SoundSubCategory::Acoustic,
                                                        SoundSubCategory::Nylon,
-                                                       SoundSubCategory::Plucked }, {}
+                                                       SoundSubCategory::Plucked }
         };
 
-        result = CHORD_SYMBOLS_SETUP_DATA;
+        result = GUITAR_SETUP_DATA;
     } else {
-        static const PlaybackSetupData CHORD_SYMBOLS_SETUP_DATA = {
-            SoundId::Piano, SoundCategory::Keyboards, {}, {}
-        };
-
-        result = CHORD_SYMBOLS_SETUP_DATA;
+        result = PIANO_SETUP_DATA;
     }
 }
 
 void PlaybackSetupDataResolver::resolveMetronomeSetupData(PlaybackSetupData& result) const
 {
     static const PlaybackSetupData METRONOME_SETUP_DATA = {
-        SoundId::Block, SoundCategory::Percussions, { SoundSubCategory::Wooden }, {}
+        SoundId::Block, SoundCategory::Percussions, { SoundSubCategory::Wooden }
     };
 
     result = METRONOME_SETUP_DATA;
