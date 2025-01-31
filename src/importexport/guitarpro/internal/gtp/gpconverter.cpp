@@ -422,6 +422,13 @@ void GPConverter::fixEmptyMeasures()
             rest->setDurationType(DurationType::V_MEASURE);
             if (Tuplet* tuplet = rest->tuplet()) {
                 tuplet->remove(rest);
+                if (tuplet->elements().empty()) {
+                    if (tuplet->tuplet()) {
+                        tuplet->tuplet()->remove(tuplet);
+                    }
+
+                    delete tuplet;
+                }
             }
         }
     }
@@ -514,7 +521,7 @@ void GPConverter::convertVoices(const std::vector<std::unique_ptr<GPVoice> >& vo
         fillUncompletedMeasure(ctx);
     }
 
-    int currentTrackFirstVoice = ctx.curTrack;
+    track_idx_t currentTrackFirstVoice = ctx.curTrack;
     for (const auto& voice : voices) {
         ctx.curTrack = currentTrackFirstVoice + voice->position();
         convertVoice(voice.get(), ctx);
