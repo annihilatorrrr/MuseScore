@@ -58,7 +58,7 @@ class DockPageView : public QQuickItem, public muse::Injectable
     Q_PROPERTY(muse::dock::DockCentralView * centralDock READ centralDock WRITE setCentralDock NOTIFY centralDockChanged)
     Q_PROPERTY(muse::dock::DockStatusBarView * statusBar READ statusBar WRITE setStatusBar NOTIFY statusBarChanged)
 
-    muse::Inject<ui::INavigationController> navigationController = { this };
+    Inject<ui::INavigationController> navigationController = { this };
 
 public:
     explicit DockPageView(QQuickItem* parent = nullptr);
@@ -89,7 +89,7 @@ public:
     DockingHolderView* holder(DockType type, Location location) const;
     QList<DockPanelView*> possiblePanelsForTab(const DockPanelView* tab) const;
 
-    bool isDockOpen(const QString& dockName) const;
+    bool isDockOpenAndCurrentInFrame(const QString& dockName) const;
     void toggleDock(const QString& dockName);
     void setDockOpen(const QString& dockName, bool open);
 

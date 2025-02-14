@@ -190,15 +190,26 @@ QList<DockPanelView*> DockPageView::possiblePanelsForTab(const DockPanelView* ta
     return result;
 }
 
-bool DockPageView::isDockOpen(const QString& dockName) const
+bool DockPageView::isDockOpenAndCurrentInFrame(const QString& dockName) const
 {
     const DockBase* dock = dockByName(dockName);
-    return dock ? dock->isOpen() : false;
+    if (!dock) {
+        return false;
+    }
+
+    const bool isDockOpen = dock && dock->isOpen();
+
+    const DockPanelView* panel = dynamic_cast<const DockPanelView*>(dock);
+    if (panel) {
+        return isDockOpen && panel->isCurrentTabInFrame();
+    }
+
+    return isDockOpen;
 }
 
 void DockPageView::toggleDock(const QString& dockName)
 {
-    setDockOpen(dockName, !isDockOpen(dockName));
+    setDockOpen(dockName, !isDockOpenAndCurrentInFrame(dockName));
 }
 
 void DockPageView::setDockOpen(const QString& dockName, bool open)
@@ -222,6 +233,7 @@ void DockPageView::setDockOpen(const QString& dockName, bool open)
     DockPanelView* destinationPanel = findPanelForTab(panel);
     if (destinationPanel) {
         destinationPanel->addPanelAsTab(panel);
+        panel->makeCurrentTabInFrame();
     } else {
         panel->open();
     }

@@ -2376,7 +2376,7 @@ static void removeBeam(Beam*& beam)
 //   handleBeamAndStemDir
 //---------------------------------------------------------
 
-static void handleBeamAndStemDir(ChordRest* cr, const BeamMode bm, const DirectionV sd, Beam*& beam, bool hasBeamingInfo)
+static void handleBeamAndStemDir(ChordRest* cr, const BeamMode bm, const DirectionV sd, Beam*& beam, bool hasBeamingInfo, Color beamColor)
 {
     if (!cr) {
         return;
@@ -2392,6 +2392,9 @@ static void handleBeamAndStemDir(ChordRest* cr, const BeamMode bm, const Directi
         beam = Factory::createBeam(cr->score()->dummy()->system());
         beam->setTrack(cr->track());
         beam->setDirection(sd);
+        if (beamColor.isValid()) {
+            beam->setColor(beamColor);
+        }
     }
     // add ChordRest to beam
     if (beam) {
@@ -5949,16 +5952,24 @@ void MusicXmlParserPass2::clef(const String& partId, Measure* measure, const Fra
     }
 
     Segment* s;
+    ClefToBarlinePosition position = ClefToBarlinePosition::AUTO;
     // check if the clef change needs to be in the previous measure
     if (!afterBarline && (tick == measure->tick()) && measure->prevMeasure()) {
         s = measure->prevMeasure()->getSegment(SegmentType::Clef, tick);
+        if (measure->prevMeasure()->repeatEnd()) {
+            position = ClefToBarlinePosition::BEFORE;
+        }
     } else {
         s = measure->getSegment(tick.isNotZero() ? SegmentType::Clef : SegmentType::HeaderClef, tick);
+        if (measure->prevMeasure() && !measure->prevMeasure()->repeatEnd()) {
+            position = ClefToBarlinePosition::AFTER;
+        }
     }
 
     Clef* clefs = Factory::createClef(s);
     clefs->setClefType(clef);
     clefs->setVisible(printObject);
+    clefs->setClefToBarlinePosition(position);
     if (clefColor.isValid()) {
         clefs->setColor(clefColor);
     }
@@ -6001,6 +6012,8 @@ static bool determineTimeSig(const String& beats, const String& beatType, const 
         st = TimeSigType::ALLA_BREVE;
     } else if (timeSymbol == u"common") {
         st = TimeSigType::FOUR_FOUR;
+    } else if (timeSymbol == u"single-number") {
+        // let pass
     } else if (!timeSymbol.empty() && timeSymbol != u"normal") {
         LOGD("determineTimeSig: time symbol <%s> not recognized", muPrintable(timeSymbol)); // TODO
         return false;
@@ -6066,10 +6079,12 @@ void MusicXmlParserPass2::time(const String& partId, Measure* measure, const Fra
                 track_idx_t track = m_pass1.trackForPart(partId) + i * VOICES;
                 timesig->setTrack(track);
                 timesig->setSig(fractionTSig, st);
-                // handle simple compound time signature
+                // handle simple compound and single time signatures
                 if (beats.contains(Char(u'+'))) {
                     timesig->setNumeratorString(beats);
                     timesig->setDenominatorString(beatType);
+                } else if (timeSymbol == u"single-number") {
+                    timesig->setNumeratorString(beats);
                 }
                 s->add(timesig);
             }
@@ -6649,6 +6664,7 @@ Note* MusicXmlParserPass2::note(const String& partId,
     const Color noteColor = Color::fromString(m_e.asciiAttribute("color").ascii());
     Color noteheadColor;
     Color stemColor;
+    Color beamColor;
     bool noteheadParentheses = false;
     String noteheadFilled;
     int velocity = round(m_e.doubleAttribute("dynamics") * 0.9);
@@ -6672,6 +6688,7 @@ Note* MusicXmlParserPass2::note(const String& partId,
         } else if (mnd.readProperties(m_e)) {
             // element handled
         } else if (m_e.name() == "beam") {
+            beamColor = Color::fromString(m_e.asciiAttribute("color").ascii());
             beam(beamTypes);
         } else if (m_e.name() == "chord") {
             chord = true;
@@ -6939,7 +6956,7 @@ Note* MusicXmlParserPass2::note(const String& partId,
             // regular note
             // handle beam
             if (!chord) {
-                handleBeamAndStemDir(c, bm, stemDir, currBeam, m_pass1.hasBeamingInfo());
+                handleBeamAndStemDir(c, bm, stemDir, currBeam, m_pass1.hasBeamingInfo(), beamColor);
             }
 
             // append any grace chord after chord to the previous chord
@@ -8456,6 +8473,10 @@ void MusicXmlParserNotations::arpeggio()
     if (m_arpeggioNo == 0) {
         m_arpeggioNo = 1;
     }
+    Color color = Color::fromString(m_e.attribute("color"));
+    if (color.isValid()) {
+        m_arpeggioColor = color;
+    }
     m_e.skipCurrentElement();  // skip but don't log
 }
 
@@ -8575,8 +8596,8 @@ static void addGlissandoSlide(const Notation& notation, Note* note,
 //   addArpeggio
 //---------------------------------------------------------
 
-static void addArpeggio(ChordRest* cr, String& arpeggioType, int arpeggioNo, ArpeggioMap& arpMap,
-                        DelayedArpMap& delayedArps)
+static void addArpeggio(ChordRest* cr, String& arpeggioType, int arpeggioNo, Color arpeggioColor,
+                        ArpeggioMap& arpMap, DelayedArpMap& delayedArps)
 {
     if (cr->isRest() && !arpeggioType.empty()) {
         // If the arpeggio is attached to a rest, store to add to the next available chord
@@ -8620,6 +8641,9 @@ static void addArpeggio(ChordRest* cr, String& arpeggioType, int arpeggioNo, Arp
                 arpeggio->setArpeggioType(ArpeggioType::DOWN);
             } else if (arpeggioType == "non-arpeggiate") {
                 arpeggio->setArpeggioType(ArpeggioType::BRACKET);
+            }
+            if (arpeggioColor.isValid()) {
+                arpeggio->setColor(arpeggioColor);
             }
             // there can be only one
             if (!(static_cast<Chord*>(cr))->arpeggio()) {
@@ -8731,15 +8755,18 @@ static void addWavyLine(ChordRest* cr, const Fraction& tick,
     if (!wavyLineType.empty()) {
         const Fraction ticks = cr->ticks();
         const track_idx_t track = cr->track();
-        const track_idx_t trk = (track / VOICES) * VOICES;           // first track of staff
         Trill*& trill = trills[wavyLineNo];
         if (wavyLineType == u"start" || wavyLineType == u"startstop") {
             if (trill) {
                 logger->logError(String(u"overlapping wavy-line number %1").arg(wavyLineNo + 1), xmlreader);
             } else {
                 trill = Factory::createTrill(cr->score()->dummy());
-                trill->setTrack(trk);
-                trill->setTrack2(trk);
+                trill->setTrack(track);
+                trill->setTrack2(track);
+
+                trill->setOrnament(Factory::createOrnament(cr));
+                trill->ornament()->setAnchor(ArticulationAnchor::AUTO);
+
                 if (wavyLineType == u"start") {
                     spanners[trill] = std::pair<int, int>(tick.ticks(), -1);
                     // LOGD("trill=%p inserted at first tick %d", trill, tick);
@@ -9018,7 +9045,7 @@ void MusicXmlParserNotations::addToScore(ChordRest* const cr, Note* const note, 
                                          std::vector<Note*>& unendedTieNotes, ArpeggioMap& arpMap,
                                          DelayedArpMap& delayedArps)
 {
-    addArpeggio(cr, m_arpeggioType, m_arpeggioNo, arpMap, delayedArps);
+    addArpeggio(cr, m_arpeggioType, m_arpeggioNo, m_arpeggioColor, arpMap, delayedArps);
     addWavyLine(cr, Fraction::fromTicks(tick), m_wavyLineNo, m_wavyLineType, spanners, trills, m_logger, &m_e);
 
     for (const Notation& notation : m_notations) {
